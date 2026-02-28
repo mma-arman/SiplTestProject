@@ -1,0 +1,86 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<script src="~/Script/CountryMaster.js"></script>
+<div class="container-fluid">
+    <div class="container mt-3">
+        <!-- Card / Form Wrapper -->
+        <div class="card shadow-sm">
+            <!-- Header -->
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span>Country Master</span>
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#countryForm" aria-expanded="true">
+                    &#x25B2;
+                </button>
+            </div>
+
+            <!-- Collapsible Form -->
+            <div class="collapse show EnterPressNext" id="countryForm">
+                <div class="card-body">
+                    <form class="EnterPressNext" id="frmCountry">
+
+                        <!-- Country Code -->
+                        <div class="mb-2 row align-items-center">
+                            <label for="txtCountryCode" class="col-sm-2 col-form-label text-end">
+                                Country Code <span class="text-danger">*</span>
+                            </label>
+                            <div class="col-sm-3">
+                                <input placeholder="Country Code" type="text" class="form-control" id="txtCountryCode" maxlength="10">
+                            </div>
+                            <!-- Country Name -->
+                            <label for="txtCountryName" class="col-sm-2 col-form-label text-end">
+                                Country Name <span class="text-danger">*</span>
+                            </label>
+                            <div class="col-sm-3">
+                                <input placeholder="Country Name" type="text" class="form-control" id="txtCountryName" maxlength="50">
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-3 row align-items-center">
+
+
+                        </div>
+                        <!------Active -->
+                        <div class="mb-3 row align-items-center">
+                            <label class="col-sm-2 col-form-label text-end">
+                                Active
+                            </label>
+                            <div class=" col-sm-3 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="CountryActive">
+
+                            </div>
+
+                        </div>
+
+
+
+
+                        <!-- Buttons -->
+                        <div class="row mt-3">
+                            <div class="col-sm-3"></div>
+                            <div class="col-sm-6">
+                                <button type="button" class="btn btn-success execute me-2" id="btnSave">
+                                    <i class="fa fa-refresh" aria-hidden="true"></i>DFGFHGJ
+                                    Save
+                                </button>
+                                <button type="button" class="btn btn-warning me-2" id="btnReset"><i class="fa fa-refresh" aria-hidden="true"></i> Reset</button>
+                                <button type="button" class="btn btn-primary me-2" id="ExportExcel"> <i class="fa fa-download" aria-hidden="true"></i>Export</button>
+
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <div class="mt-4" id="dvGrid"></div>
+
+</div>
+
