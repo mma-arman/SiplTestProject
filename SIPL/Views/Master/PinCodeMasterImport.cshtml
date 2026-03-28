@@ -1,0 +1,108 @@
+﻿@{
+    ViewBag.Title = "PinCodeImport";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="container mt-3">
+        <!-- Card / Form Wrapper -->
+        <div class="card shadow-sm">
+            <!-- Header -->
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span>Import Pin Code </span>
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#PinCodeImportForm" aria-expanded="true">
+                    &#x25B2;
+                </button>
+            </div>
+
+            <!-- Collapsible Form -->
+            <div class="collapse show EnterPressNext" id="PinCodeImportForm">
+                <div class="card-body">
+
+                    <form method="post" class="EnterPressNext" id="frmPinCodeImport" enctype="multipart/form-data" action="/Master/PinCodeMasterImport">
+
+                        <!--Input File-->
+                        <input type="file" name="File" id="File" required />
+
+                        <!-- Buttons -->
+                        <div class="row mt-3">
+                            <div class="col-sm-3"></div>
+                            <div class="col-sm-6">
+                                <button type="submit" class="btn btn-success execute me-2" id="ImportFile">
+                                    Import
+                                </button>
+
+                                <a href="/Master/DownloadPinCodeMAsterTemplate" class="btn btn-success">
+                                    Download Template
+                                </a>
+
+                                <button type="button" class="btn btn-warning me-2" id="btnReset">
+                                    <i class="fa fa-refresh" aria-hidden="true"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Session["Format"] != null)
+    {
+        <label class="bg-light m-4 p-3 border border-2 d-block">
+            @Session["Format"];
+        </label>
+    }
+
+    @if (TempData["Message"] != null && TempData["Message"] != "")
+    {
+        <label class="bg-light m-4 p-3 border border-2 d-block">
+            @TempData["Message"]
+        </label>
+    }
+
+    @{
+        var errorTable = Session["Error"] as System.Data.DataTable;
+    }
+
+    @if (ViewBag.TotalRecord != null)
+    {
+        <div class="m-4 p-4 border rounded shadow-sm d-flex align-items-center gap-3 flex-wrap">
+
+            <!-- Download Button -->
+            @if (errorTable != null && errorTable.Rows.Count > 0)
+            {
+                <a href="@Url.Action("DownoadPinCodeImportErrorResult", "Master")" class="btn btn-success btn-lg">
+                    <i class="bi bi-download me-2"></i> Download Import Result
+                </a>
+            }
+
+            <!-- Total Records -->
+            <span class="badge bg-primary fs-5 py-2 px-3 rounded-pill">
+                TotalRecord @ViewBag.TotalRecord
+            </span>
+
+            <!-- Success -->
+            <span class="badge bg-success fs-5 py-2 px-3 rounded-pill">
+                Success @ViewBag.Success
+            </span>
+
+            <!-- Failed -->
+            <span class="badge bg-danger fs-5 py-2 px-3 rounded-pill">
+                Failed @ViewBag.Failed
+            </span>
+
+        </div>
+    }
+
+    <div class="mt-4" id="dvGrid"></div>
+
+</div>
+
+<script>
+    $(document).ready(function () {
+        $("#btnReset").click(function () {
+            window.location.href = "/master/PinCodeMasterImport";
+        })
+    })
+</script>

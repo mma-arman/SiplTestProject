@@ -1,2 +1,74 @@
-This is my first project on GitHub for learning.
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Latest News App</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .news {
+            margin-top: 20px;
+        }
+        .card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
 
+    <h2>Latest News</h2>
+
+    <input type="text" id="search" placeholder="Search news..." />
+    <button onclick="getNews()">Get News</button>
+
+    <div class="news" id="newsContainer"></div>
+
+    <script>
+        async function getNews() {
+            let keyword = document.getElementById("search").value;
+
+            let url = `https://newsdata.io/api/1/latest?apikey=pub_76e9399eca5f41faae8df57bd8a4b0c3&q=${keyword}`;
+
+            try {
+                let response = await fetch(url);
+                let data = await response.json();
+
+                let container = document.getElementById("newsContainer");
+                container.innerHTML = "";
+
+                if (data.results) {
+                    data.results.forEach(news => {
+                        let card = `
+                            <div class="card">
+                                <h3>${news.title}</h3>
+                                <p>${news.description || "No description"}</p>
+                                <a href="${news.link}" target="_blank">Read More</a>
+                            </div>
+                        `;
+                        container.innerHTML += card;
+                    });
+                } else {
+                    container.innerHTML = "No news found";
+                }
+
+            } catch (error) {
+                console.error(error);
+            }
+        }
+    </script>
+
+</body>
+</html>

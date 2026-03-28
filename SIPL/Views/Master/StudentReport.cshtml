@@ -1,0 +1,105 @@
+﻿
+@{
+    ViewBag.Title = "StudentReport";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script src="~/Script/StudentReport.js"></script>
+<style>
+    html, body {
+        overflow-x: hidden;
+    }
+</style>
+<div class="container-fluid">
+    <div class="container mt-3">
+
+        <div class="card shadow-sm">
+
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span>Student Report</span>
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#studentForm">
+                    &#x25B2;
+                </button>
+            </div>
+
+            <div class="collapse show EnterPressNext" id="studentForm">
+                <div class="card-body">
+
+                    <form id="frmStudent">
+
+                        <!-- Top Row: Registration Date From/To + Registration No -->
+                        <div class="mb-2 row align-items-center">
+                            <!-- Registration Date -->
+                            <label class="col-sm-2 col-form-label text-end">Registration Date</label>
+                            <div class="col-sm-4 d-flex gap-1">
+                                <input type="date" class="form-control flex-fill" id="RegDateFrom" placeholder="From">
+                                <input type="date" class="form-control flex-fill" id="RegDateTo" placeholder="To">
+                            </div>
+
+                            <!-- Registration No -->
+                            <label class="col-sm-2 col-form-label text-end">Registration No</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" id="RegistrationNo" placeholder="Registration No">
+                            </div>
+                        </div>
+
+                        <!-- Row: Student Name + Father Name -->
+                        <div class="mb-2 row align-items-center">
+                            <label class="col-sm-2 col-form-label text-end">Student Name</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" id="StudentName" placeholder="Student Name">
+                            </div>
+
+                            <label class="col-sm-2 col-form-label text-end">Father Name</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" id="FatherName" placeholder="Father Name">
+                            </div>
+                        </div>
+
+                        <!-- Row: Mobile No + Gender -->
+                        <div class="mb-2 row align-items-center">
+                            <label class="col-sm-2 col-form-label text-end">Mobile No</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" id="MobileNo" maxlength="10" placeholder="Mobile No">
+                            </div>
+
+                            <label class="col-sm-2 col-form-label text-end">Gender</label>
+                            <div class="col-sm-4">
+                                <select class="form-control" id="Gender">
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Buttons Row -->
+                        <div class="row mt-3">
+                            <div class="col-sm-3"></div>
+                            <div class="col-sm-6">
+                                <button type="button" class="btn btn-success me-2 execute" id="Search">
+                                    <i class="fa fa-search "></i>Search
+                                </button>
+                                <button type="button" class="btn btn-warning me-2" id="Reset">
+                                    <i class="fa fa-refresh"></i> Reset
+                                </button>
+                                <button type="button" class="btn btn-primary me-2" id="Export">
+                                    <i class="fa fa-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4" id="dvGrid"></div>
+        <div class="mt-4 text-danger fs-4" id="Msg"></div>
+
+    </div>
+</div>
+
+
+

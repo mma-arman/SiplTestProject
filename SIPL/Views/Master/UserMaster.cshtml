@@ -1,0 +1,93 @@
+﻿@{
+    ViewBag.Title = "User Master";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<script src="~/Script/UserMaster.js"></script>
+<div class="container mt-3">
+    <div class="container-fluid">
+
+        <!-- Card / Form Wrapper -->
+        <div class="card shadow-sm">
+
+            <!-- Header -->
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span>User Master</span>
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#userForm" aria-expanded="true">
+                    &#x25B2;
+                </button>
+            </div>
+
+            <!-- Collapsible Form -->
+            <div class="collapse show" id="userForm">
+                <div class="card-body">
+                    <form class="EnterPressNext" id="frmUser">
+
+                        <!-- Row 1: User Code (left), User Name (right) -->
+                        <div class="mb-3 row align-items-center">
+                            <label for="UserCode" class="col-sm-2 col-form-label text-end">User Code</label>
+                            <div class="col-sm-3">
+                                <input type="text" class="form-control" id="UserId" hidden />
+                                <input type="text" class="form-control" id="UserCode" placeholder="System Generated" disabled />
+                            </div>
+
+                            <label for="UserName" class="col-sm-2 col-form-label text-end">User Name <span class="text-danger">*</span></label>
+                            <div class="col-sm-3">
+                                <input type="text" oninput="this.value=this.value.replace(/[^a-zA-Z ]/g,'')" class="form-control" id="UserName" placeholder="User Name" required />
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Mobile No (left), Email (right) -->
+                        <div class="mb-3 row align-items-center">
+                            <label for="MobileNo"  class="col-sm-2 col-form-label text-end">Mobile No <span class="text-danger">*</span></label>
+                            <div class="col-sm-3">
+                                <input type="text" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="form-control" id="MobileNo" placeholder="Mobile No" maxlength="10" required />
+                            </div>
+
+                            <label for="EmailId" class="col-sm-2 col-form-label text-end">Email Id <span class="text-danger">*</span></label>
+                            <div class="col-sm-3">
+                                <input type="email" class="form-control" id="EmailId" placeholder="Email Id" required />
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Password (left), Address (right/full width) -->
+                        <div class="mb-3 row align-items-center">
+                            <label for="Password" class="col-sm-2 col-form-label text-end">Password <span class="text-danger">*</span></label>
+                            <div class="col-sm-3">
+                                <input type="password" class="form-control" id="Password" placeholder="Password" required />
+                            </div>
+
+                            <label for="Address" class="col-sm-2 col-form-label text-end">Address <span class="text-danger">*</span></label>
+                            <div class="col-sm-3">
+                                <textarea class="form-control" id="Address" rows="2" placeholder="Address" required></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Active (left) -->
+                        <div class="mb-3 row align-items-center">
+                            <label for="Active" class="col-sm-2 col-form-label text-end">Active</label>
+                            <div class="col-sm-3 ps-5 form-check form-switch">
+                                <input type="checkbox" class="form-check-input" id="Active">
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="row mt-3">
+                            <div class="col-sm-2"></div>
+                            <div class="col-sm-6">
+                                <button type="button" class="btn execute btn-success me-2" id="Save">Save</button>
+                                <button type="reset" class="btn btn-warning me-2" id="Reset"><i class="fa fa-refresh"></i> Reset</button>
+                                <button type="button" class="btn btn-primary me-2" id="Export"><i class="fa fa-download"></i> Export</button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optional Grid / Display -->
+        <div class="mt-4" id="dvGrid">
+        </div>
+
+    </div>
+</div>

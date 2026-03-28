@@ -39,7 +39,7 @@
                                 <a href="/Master/DownloadCountryMasterTemplate" class="btn btn-success">
                                     Download Template
                                 </a>
-                                @*<button type="button" class="btn btn-warning me-2" id="btnReset"><i class="fa fa-refresh" aria-hidden="true"></i> Reset</button>*@
+                                <button type="button" class="btn btn-warning me-2" id="btnReset"><i class="fa fa-refresh" aria-hidden="true"></i> Reset</button>
 
 
                             </div>
@@ -57,31 +57,49 @@
     {
         <label class="bg-light m-4 p-4 border border-2 p-2 d-block">
             @Session["Format"]
-            
+
         </label>
 
     }
 
-    @if (Session["Error"] != null || TempData["Message"] != null)
+    @if (TempData["Message"] != null && TempData["Message"] != "")
     {
 
-     <label class="bg-light m-4 p-4 border border-2 border-warning d-block">
+        <label class="bg-light m-4 p-4 border border-2 border-warning d-block">
 
-         @if (TempData["Message"] != null)
-         {
-             @TempData["Message"]
-         }
+            @if (TempData["Message"] != null)
+            {
+                @TempData["Message"]
+            }
 
-         @if (Session["Error"] != null)
-         {
-             <a href="@Url.Action("DownloadImportError")"
-                class="btn btn-success mt-2">
-                 Download Import Report
-             </a>
 
-         }
 
-     </label>
+        </label>
+    }
+    @if (Session["Error"] != null && Session["Error"] != "")
+    {
+        <div class="m-4 p-4 border rounded shadow-sm d-flex align-items-center gap-3 flex-wrap">
+
+            <!-- Download Button -->
+            <a href="@Url.Action("DownloadImportError", "Master")" class="btn btn-success btn-lg">
+                <i class="bi bi-download me-2"></i> Download Import Result
+            </a>
+
+
+            <span class="badge bg-primary fs-5 py-2 px-3 rounded-pill">
+                TotalRecord @ViewBag.Total
+            </span>
+            <span class="badge bg-success fs-5 py-2 px-3 rounded-pill">
+                Success @ViewBag.Success
+            </span>
+
+            <!-- Failed Badge -->
+            <span class="badge bg-danger fs-5 py-2 px-3 rounded-pill">
+                Failed @ViewBag.Failed
+            </span>
+
+        </div>
+        
     }
 
 
@@ -89,6 +107,12 @@
     <div class="mt-4" id="dvGrid"></div>
 
 </div>
-
+<script>
+    $(document).ready(function () {
+        $("#btnReset").click(function () {
+            window.location.href = "/master/CountryImport";
+        })
+    })
+</script>
 
 

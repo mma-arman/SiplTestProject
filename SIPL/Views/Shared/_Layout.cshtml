@@ -22,7 +22,7 @@
 
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-
+   
 
     <!-- ✅ Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
@@ -43,6 +43,12 @@
             padding: 20px;
             transition: all 0.3s;
         }
+        #content {
+    margin-left:240px;
+    padding:20px;
+    transition:all 0.3s;
+    overflow-x:hidden;
+}
 
             #sidebar h5 {
                 font-weight: 600;
@@ -117,6 +123,22 @@
 
     <div class="d-flex">
 
+        <div style="position: fixed; top: 10px; right: 20px; background: #007bff; color: #fff; padding: 8px 12px; border-radius: 12px;">
+            @if (Session["UserInfo"] != null)
+            {
+                var userInfo = (Dictionary<string, string>)Session["UserInfo"];
+                <span>@userInfo["UserName"] (@userInfo["UserCode"])</span>
+                <a href="@Url.Action("Logout","Master")" style="color:#fff; margin-left:10px; text-decoration:none;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            }
+            else
+            {
+                <script>
+                    window.location.href = '@Url.Action("Login", "Master")';
+                </script>
+            }
+        </div>
         <!-- Sidebar -->
         <nav id="sidebar">
 
@@ -138,13 +160,38 @@
                 PinCode Master
             </a>
             <a class="nav-link @(ViewBag.ActiveMenu=="City"?"active":"")"
+               href="@Url.Action("PinCodeMasterImport","Master")">
+                PinCode Master Import
+            </a>
+            <a class="nav-link @(ViewBag.ActiveMenu=="City"?"active":"")"
                href="@Url.Action("CountryImport","Master")">
                 Country Import
+            </a>
+            <a class="nav-link @(ViewBag.ActiveMenu=="Admission"?"active":"")"
+               href="@Url.Action("UserMaster","Master")">
+                User Master
             </a>
             <a class="nav-link @(ViewBag.ActiveMenu=="City"?"active":"")"
                href="@Url.Action("UserMAsterImport","Master")">
                 User Master Import
             </a>
+            <a class="nav-link @(ViewBag.ActiveMenu=="City"?"active":"")"
+               href="@Url.Action("StudentMaster","Master")">
+                Student Registration Form
+            </a>
+            <a class="nav-link @(ViewBag.ActiveMenu=="City"?"active":"")"
+               href="@Url.Action("AdmissionMaster","Master")">
+                Student Admission Form
+            </a>
+            <a class="nav-link @(ViewBag.ActiveMenu=="Student"?"active":"")"
+               href="@Url.Action("StudentReport","Master")">
+                Student Report
+            </a>
+            <a class="nav-link @(ViewBag.ActiveMenu=="Admission"?"active":"")"
+               href="@Url.Action("AdmissionReport","Master")">
+                Admission Report
+            </a>
+
         </nav>
 
         <!-- Page Content -->

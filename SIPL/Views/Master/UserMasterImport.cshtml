@@ -4,11 +4,6 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-
-@{
-    ViewBag.Title = "CountryImport";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-}
 <div class="container-fluid">
     <div class="container mt-3">
         <!-- Card / Form Wrapper -->
@@ -45,7 +40,7 @@
                                 <a href="/Master/DownloadUserMasterTemplate" class="btn btn-success">
                                     Download Template
                                 </a>
-                                @*<button type="button" class="btn btn-warning me-2" id="btnReset"><i class="fa fa-refresh" aria-hidden="true"></i> Reset</button>*@
+                                <button type="button" class="btn btn-warning me-2" id="btnReset"><i class="fa fa-refresh" aria-hidden="true"></i> Reset</button>
 
 
                             </div>
@@ -71,26 +66,31 @@
     @{
         var errorTable = Session["Error"] as System.Data.DataTable;
     }
-    @if (errorTable != null && errorTable.Rows.Count !=0 )
+    @if (ViewBag.TotalRecord != null)
     {
         <div class="m-4 p-4 border rounded shadow-sm d-flex align-items-center gap-3 flex-wrap">
 
-            <!-- Download Button -->
-            <a href="@Url.Action("DownoadUserImportErrorResult", "Master")" class="btn btn-success btn-lg">
-                <i class="bi bi-download me-2"></i> Download Import Result
-            </a>
+            <!-- Download Button (Only when error records exist) -->
+            @if (errorTable != null && errorTable.Rows.Count > 0)
+            {
+                <a href="@Url.Action("DownoadUserImportErrorResult", "Master")" class="btn btn-success btn-lg">
+                    <i class="bi bi-download me-2"></i> Download Import Result
+                </a>
+            }
 
-          
+            <!-- Total Records -->
             <span class="badge bg-primary fs-5 py-2 px-3 rounded-pill">
                 TotalRecord @ViewBag.TotalRecord
             </span>
+
+            <!-- Success -->
             <span class="badge bg-success fs-5 py-2 px-3 rounded-pill">
                 Success @ViewBag.Success
             </span>
 
-            <!-- Failed Badge -->
+            <!-- Failed -->
             <span class="badge bg-danger fs-5 py-2 px-3 rounded-pill">
-                 Failed @ViewBag.Failed
+                Failed @ViewBag.Failed
             </span>
 
         </div>
@@ -108,6 +108,13 @@
     <div class="mt-4" id="dvGrid"></div>
 
 </div>
+<script>
+    $(document).ready(function () {
+        $("#btnReset").click(function () {
+            window.location.href = "/master/UserMasterImport";
+        })
+    })   
+</script>
 
 
 

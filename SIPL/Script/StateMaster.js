@@ -25,9 +25,9 @@ function InsertUpdateStateMaster() {
             "InsertUpdateStateMaster",
             {
                 StateID: StateID,
-                CountryCode: $("#txtCountryCode").val(),
-                StateCode: $("#txtStateCode").val(),
-                StateName: $("#txtStateName").val(),
+                CountryCode: $("#txtCountryCode").val().trim(),
+                StateCode: $("#txtStateCode").val().trim(),
+                StateName: $("#txtStateName").val().trim(),
                 Active: $("#StateActive").is(":checked").toString(),
             },
             function (data) {
@@ -58,7 +58,6 @@ function ShowStateMaster() {
         alert("Error in ShowStateMaster: " + e.message);
     }
 }
-
 function EditStateMaster(ID) {
     $("#txtCountryCode").prop("readonly", true);
     $("#txtStateCode").prop("readonly", true);
@@ -70,7 +69,7 @@ function EditStateMaster(ID) {
             $("#txtCountryCode").val(data.CountryCode);
             $("#txtStateCode").val(data.StateCode);
             $("#txtStateName").val(data.StateName);
-            $("#StateActive").prop("checked", data.Active === "True");
+            $("#StateActive").prop("checked", data.Active === "Yes");
             $("#btnStateSave").html('<i class="fas fa-pen-to-square"></i> Update');
         });
     } catch (e) {

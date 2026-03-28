@@ -69,7 +69,7 @@ function EditCountryMaster(ID) {
                     CountryID = ID;
                     $("#txtCountryName").val(data.CountryName),
                     $("#txtCountryCode").val(data.CountryCode)
-                    $("#CountryActive").prop("checked", data.CountryActive === "True");
+                    $("#CountryActive").prop("checked", data.CountryActive === "Yes");
                     $("#btnSave").html('<i class="fas fa-pen-to-square"></i> Update');
                 }
             })

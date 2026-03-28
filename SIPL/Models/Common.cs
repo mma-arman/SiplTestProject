@@ -8,12 +8,27 @@ using System.Linq;
 using System.Text;
 using System.Web;
 using System.Web.Mvc;
-using OfficeOpenXml;
+
 
 namespace SIPL.Models
 {
     public static class Common
     {
+        public static DataSet ExecuteProcedureDataSet(string Proc_name, string[,] param)
+        {
+            SqlConnection connection = new SqlConnection(System.Configuration.ConfigurationManager.AppSettings.Get("DbConnection"));
+            SqlCommand command = new SqlCommand(Proc_name, connection);
+            command.CommandType = CommandType.StoredProcedure;
+            for (int i = 0; i < param.Length / 2; i++)
+            {
+                command.Parameters.AddWithValue(param[i, 0], param[i, 1]);
+            }
+            SqlDataAdapter da = new SqlDataAdapter(command);
+            DataSet ds = new DataSet();
+            da.Fill(ds);
+            return ds;
+        }
+
         public static DataTable ExecuteProcedure(string Proc_name, string[,] param)
         {
             SqlConnection connection = new SqlConnection(System.Configuration.ConfigurationManager.AppSettings.Get("DbConnection"));
@@ -41,7 +56,7 @@ namespace SIPL.Models
 
 
 
-        public static string ShowTable(DataTable dt, string HideColumns = "", string EditFunctionName = "", string DeleteFunctionName = "",string type="")
+        public static string ShowTable(DataTable dt, string HideColumns = "", string EditFunctionName = "", string DeleteFunctionName = "",string type="",bool Report=false,string PrintReport="")
         {
             StringBuilder sb = new StringBuilder();
             List<string> HideColumn = new List<string>();
@@ -53,26 +68,46 @@ namespace SIPL.Models
                 {
                     HideColumn.Add(col.Trim());
                 }
+            }            
+            sb.Append("<div class='table-responsive' style='max-width:100%; overflow-x:auto; overflow-y:auto; max-height:300px;'>");
+            sb.Append("<table class='table table-bordered table-striped' style='white-space:nowrap; min-width:100%;'>");
+            if (!string.IsNullOrEmpty(EditFunctionName))
+            {
+                sb.Append("<th>Edit</th>");
             }
 
-            sb.Append("<div class='table-responsive' style='max-height:300px; overflow:auto;'>");
-            sb.Append("<table class='table table-bordered'><tr>");
-            sb.Append("<th>Edit</th><th>Delete</th>");
-
+            if (!string.IsNullOrEmpty(DeleteFunctionName))
+            {
+                sb.Append("<th>Delete</th>");
+            }
+            if (Report == true)
+            {
+                sb.Append("<th>Report</th>");
+            }
             foreach (DataColumn col in dt.Columns)
             {
                 if (HideColumn.Contains(col.ColumnName)) continue;
                 sb.Append("<th>" + col.ColumnName + "</th>");
             }
-            sb.Append("</tr>");
+            
 
             string idColumn = dt.Columns[0].ColumnName;
             for (int i = 0; i < dt.Rows.Count; i++)
             {
                 sb.Append("<tr>");
-                sb.Append("<td><button class='bg-primary text-white' type='button' onclick='" + EditFunctionName + "(" + dt.Rows[i][idColumn] + ")'><i class='fa-solid fa-pen-to-square'></i></button></td>");
-                sb.Append("<td><button class='bg-danger text-white' type='button' onclick='" + DeleteFunctionName + "(" + dt.Rows[i][idColumn] + ")'><i class='fa-solid fa-trash'></i></button></td>");
+                if (!string.IsNullOrEmpty(EditFunctionName))
+                {
+                    sb.Append("<td><button class='btn btn-primary btn-sm' onclick='" + EditFunctionName + "(" + dt.Rows[i][idColumn] + ")'><i class='fa-solid fa-pen-to-square'></i></button></td>");
+                }
 
+                if (!string.IsNullOrEmpty(DeleteFunctionName))
+                {
+                    sb.Append("<td><button class='btn btn-danger btn-sm' onclick='" + DeleteFunctionName + "(" + dt.Rows[i][idColumn] + ")'><i class='fa-solid fa-trash'></i></button></td>");
+                }
+                if (Report==true)
+                {
+                    sb.Append("<td><button class='btn btn-danger btn-sm' onclick='" + PrintReport + "(\""  + dt.Rows[i][idColumn] + "\")'><i class='fa fa-print '></i></button></td>");
+                }
                 foreach (DataColumn col in dt.Columns)
                 {
                     if (HideColumn.Contains(col.ColumnName)) continue;
@@ -88,46 +123,22 @@ namespace SIPL.Models
             return sb.ToString();
         }
 
-        //public static string ExportToExcel(DataTable dt)
-        //{
-        //    StringBuilder sb = new StringBuilder();
-        //    sb.Append("<table border=1>");
-        //    sb.Append("<tr>");
-        //    sb.Append("<th>Sr.no</th>");
-        //    var Sno = 1;
-        //    foreach (DataColumn col in dt.Columns)
-        //    {
-        //        sb.Append("<th>"+ col.ColumnName+"</th>");
-        //    }
-        //    sb.Append("</tr>");
-        //    sb.Append("<tr>");
-        //    foreach (DataRow row in dt.Rows)
-        //    {
-        //        sb.Append("<td>" + Sno +"</td>");
-        //        foreach (DataColumn col in dt.Columns)
-        //        {
-        //            sb.Append("<td>" + row[col] +"</td>");
-        //        }
-        //        sb.Append("</tr>");
-        //        Sno++;
-        //    }
-           
-        //    sb.Append("</table>");
-
-
-        //    return sb.ToString();
-        //}
-
-        // For tasteing
        
-            public static byte[] ExportToExcel(DataTable dt, string sheetName = "Sheet1")
+        public static byte[] ExportToExcel(DataTable dt, string sheetName = "Sheet1", bool Sno = false)
             {
                 ExcelPackage.License.SetNonCommercialOrganization("name");
+            if (Sno is true)
+            {
+                dt.Columns.Add("S.No", typeof(int)).SetOrdinal(0);
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    dt.Rows[i]["S.No"] = i + 1;
+                }
+            }           
 
-                using (var package = new ExcelPackage())
+            using (var package = new ExcelPackage())
                 {
                     var ws = package.Workbook.Worksheets.Add(sheetName);
-
                     // Header + Data automatic
                     ws.Cells["A1"].LoadFromDataTable(dt, true);
 
@@ -149,7 +160,23 @@ namespace SIPL.Models
             return ExecuteProcedure("USP_CommonFormat", param);
         }
 
-
+        public static string ConvertToxml<T>(List<T> list,String RootName="RootName",string ChildName = "ChildName")
+        {
+            StringBuilder Xml=new StringBuilder();
+            Xml.Append($"<{RootName}>");
+            foreach (var l in list)
+            {
+                Xml.Append($"<{ChildName}>");
+                foreach (var prop in typeof(T).GetProperties())
+                {
+                    var value = prop.GetValue(l, null);
+                    Xml.Append($"<{prop.Name}>{value}</{prop.Name}>");
+                }
+                Xml.Append($"</{ChildName}>");
+            }
+            Xml.Append($"</{RootName}>");
+            return Xml.ToString();
+        }
 
 
        
