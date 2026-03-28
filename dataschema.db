@@ -1,0 +1,1358 @@
+CREATE DATABASE SIPL;
+GO
+
+USE SIPL;
+GO
+
+-- Country Master Table
+CREATE TABLE dbo.CountryMaster
+(
+    CountryID INT IDENTITY(1,1) CONSTRAINT PK_CountryMaster_CountryID PRIMARY KEY,
+    CountryCode VARCHAR(10) NOT NULL CONSTRAINT UK_CountryMaster_CountryCode UNIQUE,
+    CountryName VARCHAR(50),
+    CreatedDate DATETIME CONSTRAINT DF_CountryMaster_CreatedDate DEFAULT(GETDATE()),
+    ModifiedDate DATETIME NULL,
+    Active BIT
+);
+GO
+-- Insert / Update Country
+ALTER PROC dbo.USP_InsertUpdateCountry
+(
+    @CountryID INT=null,
+    @CountryCode VARCHAR(10),
+    @CountryName VARCHAR(50),
+    @Active BIT
+)
+AS
+BEGIN
+    DECLARE @Msg VARCHAR(MAX);
+    DECLARE @Status VARCHAR(MAX)='0';
+    IF (@CountryID = 0 or @CountryID is null)
+    BEGIN
+        If Exists(Select 1 from CountryMaster where CountryCode=@CountryCode or CountryName=@CountryName)
+            SET @Msg = 'Country Already Exist';
+        Else
+        Begin
+            INSERT INTO CountryMaster (CountryCode, CountryName, Active)
+            VALUES (@CountryCode, @CountryName, @Active);
+            SET @Msg = 'Country has been saved successfully.';
+            SET @Status = '1';
+        End
+    END
+    ELSE
+    BEGIN
+        If Exists(select 1 from CountryMaster where (CountryCode=@CountryCode or CountryName=@CountryName) and CountryID<>@CountryID)
+        Begin 
+            Set @Msg='Country Already Exist';
+        End
+        Else
+        Begin
+            UPDATE CountryMaster
+            SET CountryCode = @CountryCode,CountryName = @CountryName,Active = @Active,ModifiedDate = GETDATE() WHERE CountryID = @CountryID;
+            SET @Msg = 'Country has been updated successfully.';
+            SET @Status = '1';
+        End
+      
+    END
+
+    SELECT @Msg AS Msg, @Status AS STATUS;
+END;
+GO
+
+-- Show Country
+ALTER PROC dbo.USP_ShowCountryMaster 
+(
+    @CountryID INT = 0,
+    @type Varchar(10)='Show'
+)
+AS
+BEGIN
+if @CountryID=0 set @CountryID = null
+    IF (  @type='Show')
+    BEGIN
+        SELECT CountryID, CountryCode, CountryName,
+               CASE WHEN Active = 1 THEN 'Yes' ELSE 'No' END AS [Active],
+               FORMAT(CreatedDate,'dd-MM-yyyy hh:mm tt') AS CreatedDate,
+               FORMAT(ModifiedDate,'dd-MM-yyyy hh:mm tt') AS ModifiedDate,
+               'CountryID,HideColumn,' AS HideColumn 
+        FROM CountryMaster Where CountryID = IIF(isnull(@CountryID,0)=0,CountryID,@CountryID);;
+    END
+    Else 
+    BEGIN
+        SELECT  CountryCode, CountryName,
+               Case When Active = 1 Then 'Yes' Else 'No' End As [Active],
+               FORMAT(CreatedDate,'dd-MM-yyyy hh:mm tt') As CreatedDate,
+               FORMAT(ModifiedDate,'dd-MM-yyyy hh:mm tt') As ModifiedDate               
+        From CountryMaster Where CountryID = IIF(isnull(@CountryID,0)=0,CountryID,@CountryID);
+    End
+    end
+    
+GO
+
+-- Delete Country
+ALTER PROC dbo.USP_DeleteCountryMaster (@CountryID INT)
+AS
+BEGIN
+    DECLARE @Msg VARCHAR(MAX);
+    DECLARE @CountryCode VARCHAR(10);
+
+    SELECT @CountryCode = CountryCode FROM CountryMaster WHERE CountryID = @CountryID;
+    if Not Exists(select 1 from CountryMaster where CountryID =@CountryID)
+    Begin
+        SET @Msg = 'Country Does Not Exist';
+    End
+    Else IF EXISTS (SELECT 1 FROM StateMaster WHERE CountryCode = @CountryCode)
+        SET @Msg = 'Currently this Country is in use in State Master.If you want to delete then .First delete related states.';
+    ELSE
+    BEGIN
+        DELETE FROM CountryMaster WHERE CountryID = @CountryID;
+        SET @Msg = 'Country has been deleted successfully.';
+    END
+
+    SELECT @Msg AS Msg;
+END;
+GO
+
+-- State Master Table
+CREATE TABLE dbo.StateMaster
+(
+    StateID INT PRIMARY KEY IDENTITY(1,1),
+    CountryCode VARCHAR(10) NOT NULL FOREIGN KEY REFERENCES CountryMaster(CountryCode),
+    StateCode VARCHAR(10) UNIQUE NOT NULL,
+    StateName VARCHAR(50) NOT NULL,
+    CreatedDate DATETIME DEFAULT(GETDATE()),
+    ModifiedDate DATETIME,
+    Active BIT DEFAULT(1)
+);
+GO
+
+-- Insert / Update State
+ALTER PROC dbo.USP_InsertUpdateState
+(
+    @StateID INT,
+    @CountryCode VARCHAR(10),
+    @StateCode VARCHAR(10),
+    @StateName VARCHAR(50),
+    @Active BIT
+)
+AS
+BEGIN
+    DECLARE @Msg VARCHAR(MAX);
+    DECLARE @Status VARCHAR(MAX);
+    DECLARE @countryid INT;
+
+    SELECT @countryid = CountryId FROM CountryMaster WHERE CountryCode = @CountryCode;
+
+    IF (@countryid IS NULL)
+    BEGIN
+        SET @Msg = 'Country does not Exist Choose Diffrent Country';
+        SET @Status = '0';
+    END
+    ELSE
+    BEGIN
+        IF (@StateID = 0 or @StateID is null)
+        BEGIN
+            IF EXISTS (SELECT 1  FROM StateMaster  WHERE StateCode=@StateCode or StateName=@StateName)
+            Begin 
+                Set @Msg='State Already Exist';
+                SET @Status = '0';
+            End
+            Else
+            Begin
+                 INSERT INTO StateMaster (CountryCode, StateCode, StateName, Active)
+                VALUES (@CountryCode, @StateCode, @StateName, @Active);
+                SET @Msg = 'State has been saved successfully.';
+                SET @Status = '1';
+            End
+           
+        END
+        ELSE
+            BEGIN
+            if exists ( select 1 from StateMaster where StateCode=@StateCode or StateName=@StateName)
+            Begin
+                Set @Msg='State Already Exist';
+                SET @Status = '0';
+            End
+            Else
+            Begin
+                UPDATE StateMaster
+                SET CountryCode = @CountryCode,StateCode = @StateCode,StateName = @StateName,Active = @Active,ModifiedDate = GETDATE()
+                WHERE StateID = @StateID;
+                SET @Msg = 'State has been updated successfully.';
+                SET @Status = '1';
+            End       
+        END
+    END
+
+    SELECT @Msg AS Msg, @Status AS Status;
+END;
+GO
+
+-- Show State
+ALTER PROC dbo.USP_ShowStateMaster 
+(
+@StateID INT = 0,
+@type varchar(50)='Show'
+)
+AS
+BEGIN
+    if @StateID=0 set @StateID=null
+    IF (@type ='Show')
+    BEGIN
+        SELECT SM.StateID, C.CountryCode + ' : ' + C.CountryName AS Country,SM.StateCode,SM.StateName,
+               CASE WHEN SM.Active = 1 THEN 'Yes' ELSE 'No' END AS [Active],
+               FORMAT(SM.CreatedDate,'dd-MM-yyyy hh:mm tt') AS CreatedDate,
+               FORMAT(SM.ModifiedDate,'dd-MM-yyyy hh:mm tt') AS ModifiedDate,
+               'StateID,HideColumn,' AS HideColumn FROM StateMaster SM LEFT JOIN CountryMaster C ON C.CountryCode = SM.CountryCode
+               where StateID= IIF(ISNULL(@StateId,0)=0,StateID,@StateId)
+    END
+    ELSE
+    BEGIN
+        SELECT C.CountryCode + ' : ' + C.CountryName AS Country,
+               SM.StateCode,SM.StateName,
+               Case When Sm.Active='1'Then 'Yes ' Else 'No' End As Active,
+               SM.CreatedDate,
+               FORMAT(SM.ModifiedDate,'dd-MM-yyyy hh:mm tt') AS ModifiedDate
+        FROM StateMaster SM
+        LEFT JOIN CountryMaster C ON C.CountryCode = SM.CountryCode
+        Where StateID= IIF(ISNULL(@StateId,0)=0,StateID,@StateId)
+    END
+END;
+GO
+
+-- Delete State
+ALTER PROC dbo.USP_DeleteStateMaster (@StateID INT)
+AS
+BEGIN
+    DECLARE @Msg VARCHAR(MAX);
+    DECLARE @StateCode VARCHAR(10);
+
+    SELECT @StateCode = StateCode FROM StateMaster WHERE StateID = @StateID;
+
+    IF EXISTS (SELECT 1 FROM CityMaster WHERE StateCode = @StateCode)
+        SET @Msg = 'Currently state is use in City if you want to delete then firse delete city';
+    ELSE
+    BEGIN
+        BEGIN
+            DELETE FROM StateMaster WHERE StateID = @StateID;
+            SET @Msg = ' State has been deleted successfully.';
+        END
+    END
+
+    SELECT @Msg AS Msg;
+END;
+GO
+
+-- AutoCompete
+ALTER PROCEDURE dbo.USP_GetAutocomplete
+    @search VARCHAR(50),
+    @Type VARCHAR(50),
+    @typeSearch VARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF (@Type = 'GetCountry' AND @Search = '.')
+    BEGIN
+        SELECT TOP 10 (CountryCode + ' : ' + CountryName) AS Selected
+        FROM CountryMaster
+        ORDER BY CountryName;
+    END
+    ELSE IF (@Type = 'GetCountry')
+    BEGIN
+        SELECT TOP 10 CountryCode AS Value,
+               (CountryCode + ' : ' + CountryName) AS Selected
+        FROM CountryMaster
+        WHERE CountryCode LIKE '%' + @search + '%'
+           OR CountryName LIKE '%' + @search + '%'
+        ORDER BY CountryName;
+    END
+    ELSE IF (@Type = 'GetState' AND @Search = '.')
+    BEGIN
+        SELECT TOP 10 (StateCode + ' : ' + StateName) AS Selected
+        FROM StateMaster
+        WHERE CountryCode = @typeSearch
+        ORDER BY StateName;
+    END
+    ELSE IF (@Type = 'GetState')
+    BEGIN
+        SELECT TOP 10 (StateCode + ' : ' + StateName) AS Selected
+        FROM StateMaster
+        WHERE (StateCode LIKE '%' + @search + '%'
+           OR StateName LIKE '%' + @search + '%')
+          AND CountryCode = @typeSearch
+        ORDER BY StateName;
+    END
+    ELSE IF (@Type = 'GetCity')
+    BEGIN
+        SELECT TOP 10 (City) AS Selected
+        FROM CityMaster
+        WHERE (City LIKE '%' + @search + '%'
+           OR City LIKE '%' + @search + '%')
+          AND (@typeSearch IS NULL OR StateCode = @typeSearch)
+        ORDER BY City;
+    END
+    ELSE IF (@Type = 'RegistrationNo')
+    BEGIN
+        SELECT  (RegistrationNo) AS Selected
+        FROM StudentMaster
+        WHERE (RegistrationNo LIKE '%' + @search + '%'
+           OR RegistrationNo LIKE '%' + @search + '%')
+           ORDER BY RegistrationNo;
+    END
+    ELSE IF (@Type = 'AdmissionNo')
+    BEGIN
+        SELECT  (AdmissionNo) AS Selected
+        FROM AdmissionMaster
+        WHERE (AdmissionNo LIKE '%' + @search + '%'
+           OR AdmissionNo LIKE '%' + @search + '%')
+           ORDER BY AdmissionNo;
+    END
+END;
+GO
+
+-- CityMaster Table
+Create TABLE dbo.CityMaster
+(
+    CityID INT PRIMARY KEY IDENTITY(1,1),
+    CountryCode VARCHAR(10) FOREIGN KEY REFERENCES CountryMaster(CountryCode),
+    StateCode VARCHAR(10) FOREIGN KEY REFERENCES StateMaster(StateCode),
+    City VARCHAR(50) CONSTRAINT UK_CityMaster_City UNIQUE,
+    Active BIT,
+    CreatedDate DATETIME CONSTRAINT DF_CityMaster_CreatedDate DEFAULT GETDATE(),
+    ModifiedDate DATETIME NULL
+);
+GO
+
+-- city master procedure insertupdateCity
+ALTER PROC dbo.USP_InsertUpdateCity
+(
+    @CityID INT=null,
+    @CountryCode VARCHAR(50),
+    @StateCode VARCHAR(50),
+    @City VARCHAR(50),
+    @Active BIT
+)
+AS
+BEGIN
+    DECLARE @Msg VARCHAR(MAX);
+    DECLARE @Status VARCHAR(MAX);
+    Declare @Focus Varchar(max);
+    IF (@CityID = 0 or @CityID is null)
+    BEGIN
+        if not exists(select CountryCode from CountryMaster where CountryCode=@CountryCode)
+        Begin
+            Select @CountryCode=CountryCode from CountryMaster where CountryName=@CountryCode
+        End
+        if not exists(select StateCode from StateMaster where StateCode=@StateCode)
+        Begin
+            Select @StateCode=StateCode from StateMaster where StateName=@StateCode
+        End
+        If not Exists(select * from CountryMaster where CountryCode=@CountryCode)
+        Begin
+            Set @Msg='Invalid Country'
+            Set @Focus='txtCountryCode';
+        End
+        Else If  Exists (Select * from StateMaster where StateCode=@StateCode and CountryCode  <> @CountryCode)
+        Begin
+            Set @Msg='Invalid State For Selected Country'
+            Set @Focus='txtState';
+        End
+        Else If Exists(Select * from CityMaster Where StateCode=@StateCode and City=@City)
+        Begin
+            Set @Msg='City Already Exist'
+            Set @Focus='txtCityName';
+        End
+        Else
+        Begin
+            DECLARE @StateISPresent INT = 0;
+            SELECT @StateISPresent = StateID FROM StateMaster WHERE StateCode = @StateCode
+            AND CountryCode = @CountryCode;
+            IF (@StateISPresent = 0)
+            BEGIN
+                SET @Msg = 'Invalid  State';
+                Set @Focus='txtState';
+            END
+            ELSE
+            BEGIN
+                INSERT INTO CityMaster (CountryCode, StateCode, City, Active)
+                VALUES (@CountryCode, @StateCode, @City, @Active);
+                SET @Msg = 'The city has been Added Succesfully';
+                SET @Status = '1';
+            END
+        End     
+    END
+    ELSE
+    Begin
+      
+        if not exists(select CountryCode from CountryMaster where CountryCode=@CountryCode)
+        Begin
+            Select @CountryCode=CountryCode from CountryMaster where CountryName=@CountryCode
+        End
+        if not exists(select StateCode from StateMaster where StateCode=@StateCode)
+        Begin
+            Select @StateCode=StateCode from StateMaster where StateName=@StateCode
+        End
+        if not exists( select 1 from CityMaster where CityID=@CityID)
+        Begin
+            SET @Msg='Invalid CityID';
+        End
+        Else If exists(select 1 from PinCodeMaster where City =(Select City from CityMaster where CityID=@CityID))
+        Begin
+            SET @Msg = 'The city is in use in Pincode if You want to Edit Then First Delete PinCode Of this City ';
+        End
+        Else If Exists(Select * from CityMaster Where City=@City and CityID<>@CityID)
+        Begin
+            Set @Msg='City Already Exist'
+            Set @Focus='txtCityName';
+        End
+        Else
+        Begin
+            UPDATE CityMaster
+            SET CountryCode = @CountryCode,StateCode = @StateCode,City = @City,Active = @Active,ModifiedDate=GETDATE()
+            WHERE cityID = @CityID;
+            SET @Msg = 'The city has been updated successfully';
+            SET @Status = '1';
+        End
+    END
+
+    SELECT @Msg AS Msg, @Status AS Status,@Focus As Focus;
+END;
+GO
+
+--show city master
+ALTER PROC USP_ShowCityMaster
+(
+    @CityID INT = 0,
+    @type varchar(50)='Show'
+)
+AS
+BEGIN
+If @CityID=0 set @CityID = null
+Else IF (@type='Show')
+BEGIN
+    SELECT c.CityID,CountryMaster.CountryCode + ' : ' + CountryMaster.CountryName AS Country,
+    s.StateCode + ' : ' + s.StateName AS State,c.City,
+    CASE WHEN c.Active = '1' THEN 'Yes' ELSE 'No' END AS Active,c.CreatedDate,
+    c.ModifiedDate,'CityID,HideColumn,' AS HideColumn 
+    FROM CityMaster c LEFT JOIN CountryMaster ON CountryMaster.CountryCode = c.CountryCode
+    LEFT JOIN StateMaster s ON s.StateCode = c.StateCode where CityID= IIF(ISNULL(@CityID,0)=0,CityId,@cityID)
+END
+ELSE
+    BEGIN
+        SELECT CM.CountryCode+' : '+CM.CountryName AS Country,
+        SM.StateCode + ' : '+ SM.StateName AS State,C.City,
+        CASE WHEN C.Active = '1' THEN 'Yes' ELSE 'No' END AS Active
+        FROM CityMaster C LEFT JOIN CountryMaster CM ON CM.CountryCode=C.CountryCode LEFT JOIN
+        StateMaster SM ON SM.StateCode=C.StateCode WHERE C.CityID= IIF(ISNULL(@CityID,0)=0,CityId,@cityID)
+    END
+END;
+GO
+
+-- Delete City Master
+Alter PROC dbo.USP_DeleteCityMaster 
+(
+    @CityID INT= null
+)
+AS
+BEGIN
+Declare @Msg Varchar(max);
+Declare @City Varchar(max);
+select @City=city From CityMaster where CityID=@CityID;
+    If Not Exists(select 1 from CityMaster where CityID=@CityID)
+    Begin
+        Set @Msg= 'Invalid CityId' 
+    End
+    Else If Exists(select PinCode from PinCodeMaster Where City=@City )
+    Begin
+        Set @Msg='Currently This City is use in PinCode if you want to delete then first delete Pincode';
+    End
+    Else
+    Begin
+        DELETE FROM CityMaster WHERE CityID = @CityID;
+        Set @Msg= 'The city has been successfully deleted.' 
+    End   
+    Select @Msg As Msg
+END;
+GO
+
+--PinCode Master Start
+
+Create Table dbo.PinCodeMaster
+(
+    PinCodeID int Identity(1,1) Constraint Pk_PinCodeMAster Primary Key,
+    PinCode Varchar(6) Constraint UQ_PinCode Unique,
+    CountryCode Varchar(10) Foreign Key References CountryMaster(CountryCode),
+    StateCode Varchar(10) Foreign Key References StateMaster(StateCode),
+    City Varchar(50) Foreign key References CityMaster(City),
+    CreatedDate DateTime Constraint DF_PinCodeMaster_CreatedDate Default Getdate(),
+    ModifiedDate DateTime NULL,
+    Active bit
+)
+--Insert UPdate PinCodeMaster
+alter Proc USP_InsertUpdatePincodeMaster
+(
+    @PinCodeID int =null ,
+    @PinCode Varchar(6),
+    @CountryCode Varchar(50),
+    @StateCode Varchar(50) ,
+    @City Varchar(50),
+    @Active bit
+)
+As
+Begin
+    Declare @msg Varchar(max);
+    Declare @Status Varchar(max)='0';
+    Declare @Focus Varchar(max);
+    If(@PincodeID=0 or @PinCodeID is null)
+    Begin
+       
+       IF NOT EXISTS (SELECT 1 FROM CountryMaster WHERE CountryCode = @CountryCode)
+        BEGIN
+            SELECT @CountryCode = CountryCode 
+            FROM CountryMaster 
+            WHERE CountryName = @CountryCode
+        END
+        IF NOT EXISTS (SELECT 1 FROM StateMaster WHERE StateCode = @StateCode)
+        BEGIN
+            SELECT @StateCode = StateCode 
+            FROM StateMaster 
+            WHERE StateName = @StateCode
+        END
+        If not exists(select 1 from CountryMaster where CountryCode=@CountryCode)
+        Begin
+            Set @msg='Invalid Country';
+            Set @Focus='txtCountryCode' 
+        End
+        Else If Not Exists(Select 1 from StateMaster Where StateCode=@StateCode)
+        Begin
+            Set @msg='Invalid State';
+            Set @Focus='txtState' 
+        End        
+        Else If Not Exists(select 1 from StateMaster where CountryCode=@CountryCode and StateCode=@StateCode)
+        Begin
+            Set @msg='Selected State does not belong to this Country';
+            Set @Focus='txtState' 
+        End 
+        Else If Not Exists(Select 1 from CityMaster Where City=@City)
+        Begin
+            Set @msg='Invalid City';
+            Set @Focus='txtCityName' 
+        End
+        Else If  Exists(Select 1 from CityMaster Where City=@City and StateCode<>@StateCode)
+        Begin
+            Set @msg='Selected City Does Not Belong To this State';
+            Set @Focus='txtCityName' 
+        End
+        Else If Exists(Select 1 from PinCodeMaster Where PinCode=@PinCode)
+        Begin
+            Set @msg='PinCode Already Exist';
+            Set @Focus='txtPinCode'
+        End
+        ELSE IF EXISTS (SELECT 1 FROM PinCodeMaster WHERE City=@City)
+        BEGIN
+            SET @Msg = 'This city already has a PinCode';
+            SET @Focus = 'txtPinCode';
+        END
+        Else If Exists(Select 1 from PinCodeMaster Where PinCode=@PinCode and City=@City)
+        Begin
+            Set @msg='PinCode Already Exist';
+            Set @Focus='txtPinCode'
+        End
+        Else If (len(@PinCode)<>6)
+        Begin
+            Set @msg='PinCode should be 6 digit';
+        End
+        Else
+        Begin
+             Insert into Dbo.PinCodeMaster(PinCode,CountryCode,StateCode,city,Active)
+             Values(@PinCode,@CountryCode,@StateCode,@City,@Active)
+             Set @msg='Record Added Succesfully';
+             Set @Status='1';
+        End
+    End
+    Else
+    Begin
+        If (len(@PinCode)<>6)
+        Begin
+            Set @msg='PinCode should be 6 digit';
+        End
+        Else If Exists(Select 1 from PinCodeMaster Where PinCode=@PinCode and PinCodeID<>@PinCodeID)
+        Begin
+            Set @msg='PinCode Already Exist';
+            Set @Focus='txtPinCode'
+        End
+        Else
+        Begin
+            IF NOT EXISTS (SELECT 1 FROM CountryMaster WHERE CountryCode = @CountryCode)
+                BEGIN
+                     SELECT @CountryCode = CountryCode 
+                     FROM CountryMaster 
+                     WHERE CountryName = @CountryCode
+                END
+            IF NOT EXISTS (SELECT 1 FROM StateMaster WHERE StateCode = @StateCode)
+                BEGIN
+                    SELECT @StateCode = StateCode 
+                    FROM StateMaster 
+                    WHERE StateName = @StateCode
+                END
+            If Not Exists(select 1 from CountryMaster where CountryCode=@CountryCode)
+            Begin
+                select @CountryCode=CountryCode from CountryMaster where CountryName=@CountryCode
+            End          
+              If Not Exists(select 1 from StateMaster where StateCode=@StateCode)
+            Begin
+                select @StateCode=StateCode from StateMaster where StateName=@StateCode
+            End    
+            If Not Exists(select 1 from PinCodeMaster where PinCodeID=@PinCodeID )
+            Begin
+                Set @msg='Invalid PinCodeID'
+            End            
+            Else If not exists( select 1 from PinCodeMaster where CountryCode=@CountryCode and StateCode=@StateCode and City=@City and @PinCodeID=@PinCodeID )
+            Begin
+                Set @msg='Modification of Country, State and City is not allowed ';
+            End
+            Else
+            Begin
+                Update PinCodeMaster Set PinCode=@PinCode,CountryCode=@CountryCode,StateCode=@StateCode,
+                City=@City,Active=@Active,ModifiedDate=GETDATE() where PinCodeID=@PinCodeID
+                Set @msg='PinCode Updated Succesfully';
+                Set @Status='1';
+            End
+           
+        End
+    End
+    select @msg AS Msg,@Status AS Status,@Focus As Focus
+End
+Go
+--Show PinCode Master
+Alter Proc USP_ShowPinCodeMaster
+(
+    @PinCodeID Int = 0,
+    @type Varchar(50)='Show'
+)
+As
+Begin
+    If @PinCodeID=0 set @PinCodeID=null;
+    If (@type='Show')
+    Begin
+        Select PM.PinCodeID,PM.PinCode,CountryMaster.CountryCode + ' : ' + CountryMaster.CountryName As Country,
+         SM.StateCode + ' : ' + SM.StateName As State,PM.City,
+         Case When PM.Active = 1 Then 'Yes' Else 'No' End As Active,
+         Format(PM.CreatedDate,'dd-MM-yy,hh:mm tt')As CreatedDate,
+         Format(PM.ModifiedDate,'dd-MM-yy,hh:mm tt')As ModifiedDate,
+         'PinCodeID,HideColumn,' As HideColumn
+         From PinCodeMaster PM Left Join CountryMaster On CountryMaster.CountryCode = PM.CountryCode
+         Left Join StateMaster SM On SM.StateCode = PM.StateCode
+         where PinCodeID=IIF(isnull(@PinCodeID,0)=0,PinCodeID,@PinCodeId)
+    End
+    Else
+    Begin
+        Select PM.PinCode,CountryMaster.CountryCode + ' : ' + CountryMaster.CountryName
+        As Country,SM.StateCode + ' : ' + SM.StateName As State,PM.City,
+        Case When PM.Active = 1 Then 'Yes' Else 'No' End As Active,
+        Format(PM.CreatedDate,'dd-MM-yy,hh:mm tt')As CreatedDate,
+        Format(PM.ModifiedDate,'dd-MM-yy,hh:mm tt')As ModifiedDate
+        From PinCodeMaster PM Left Join CountryMaster On CountryMaster.CountryCode = PM.CountryCode
+        Left Join StateMaster SM On SM.StateCode = PM.StateCode where PM.PinCodeID=IIF(isnull(@PinCodeID,0)=0,PM.PinCodeID,@PinCodeId)
+    End
+End;
+Go
+
+---Delete PinCode Master
+Alter Proc dbo.USP_DeletePinCodeMaster 
+(
+    @PinCodeID Int
+)
+As
+Begin
+    IF NOT EXISTS (Select 1 From PinCodeMaster Where PinCodeID = @PinCodeID)
+Begin
+    SELECT 'Invalid PinCodeID' AS Msg;
+End
+
+Else
+Begin
+    Delete From PinCodeMaster WHERE PinCodeID = @PinCodeID;
+    Select 'PinCode deleted successfully' AS Msg;
+End
+
+
+End
+GO
+
+----Sp For Format Common
+Alter Proc USP_CommonFormat
+(
+@type varchar(20)
+)
+As
+Begin
+    If(@type='Country')
+    Begin
+        select '' As CountryCode,'' As CountryName,'' As Active 
+    End
+    Else If(@type='State')
+    Begin
+        select '' As CountryCode ,'' As StateCode,'' As StateName,'' As Active from StateMaster 
+    End
+    Else If(@type='City')
+    Begin
+        Select '' As CountryCode,'' As StateCode,'' As City,'' As Active from CityMaster
+    End
+    Else If(@type='PinCode')
+    Begin
+        Select '' As CountryCode,'' As StateCode,'' As City,'' As PinCode,'' As Active from PinCodeMaster
+    End
+     Else If(@type='PinCodeImport')
+    Begin
+        Select '' As Country,'' As State,'' As City,'' As PinCode,'' As Active from PinCodeMaster
+    End
+    Else If(@type='User')
+    Begin
+         Select '' As UserCode,'' As UserName,'' As MobileNo,'' As Password,'' As EmailId ,''As Address,'' As Active from UserMAster
+    End
+End
+Go
+
+--User Master
+Create Table dbo.UserMaster
+(
+    UserId Int Identity(1,1) Constraint Pk_UserMaster Primary Key,
+    UserCode Varchar (10) Constraint Uk_UserMaster_UserCode Unique,
+    UserName Varchar(50),
+    MobileNo VARCHAR(10),
+    Password Varchar(50),
+    EmailId Varchar(30)Constraint Uk_UserMaster_Email Unique,
+    Address Varchar(200),
+    Active Bit,
+    CreatedDate DateTime Constraint DF_UserMaster_CreatedDAte Default Getdate(),
+    ModifiedDate DateTime
+)
+Go
+CREATE SEQUENCE Seq_UserCode
+START WITH 1001
+INCREMENT BY 1;
+Alter Proc USP_InsertUpdateUserMaster
+(
+    @UserId Int =null,
+    @UserCode Varchar (10)=null,
+    @UserName Varchar(50),
+    @MobileNo Varchar(10) ,
+    @Password Varchar(50),
+    @EmailId Varchar(30),
+    @Address Varchar(200),
+    @Active Bit
+)
+As
+Begin
+Declare @Msg Varchar(max);
+Declare @Status Varchar(max)='0';
+Declare @Focus Varchar(max);
+
+If(@UserId is null or @UserId='')
+Begin
+    if Not exists(select UserCode from UserMaster )
+    Begin
+        Set @UserCode='USR1001'
+    End
+    Else IF (@UserCode IS NULL or @UserCode='')
+    BEGIN
+        Select @UserCode='USR'+Cast( MAX(Cast(SUBSTRING(UserCode,4,len(UserCode))As int) )+1 As varchar )from UserMaster
+    END
+    IF LEFT(@MobileNo,3) = '+91'
+    BEGIN
+        SET @MobileNo = SUBSTRING(@MobileNo,4,10)
+    END
+    if(Len(@UserCode)>10)
+    Begin
+        set @Msg='User Code Should be 10 or Less than 10 Digit';
+        Set @Focus='MobileNo'
+    End
+    Else IF(@MobileNo LIKE '%[^0-9]%')
+    Begin
+        set @Msg='Mobile no Should be Only Numbers';
+         Set @Focus='MobileNo'
+    End
+    Else IF (len(@MobileNo)<> 10)
+    Begin 
+        set @Msg='Mobile No should Be 10 digit ';
+        Set @Focus='MobileNo'
+    End
+    Else If exists(select 1 from UserMaster where EmailId=@EmailId)
+    Begin
+        Set @Msg='User Already Exist';
+    End
+    
+    Else If(@EmailId NOT LIKE '%_@__%.__%')
+    Begin
+        Set @Msg='EmailId is Not in Valid Format'
+        Set @Focus='EmailId'
+    End
+    Else
+    Begin
+        Insert into UserMaster(UserCode,UserName,MobileNo,Password,EmailId,Address,Active)
+        Values(@UserCode,@UserName,@MobileNo,@Password,@EmailId,@Address,@Active)
+        set @Msg='User Add Succesfully';
+        Set @Status='1';
+    End
+End
+Else
+Begin
+    IF EXISTS(SELECT 1 FROM UserMaster WHERE EmailId=@EmailId AND UserId<>@UserId)
+    Begin
+        SET @Msg='Email already Exist';
+        Set @Focus='EmailId'
+    End
+    ELSE
+    Begin
+    Update UserMaster set UserName=@UserName ,MobileNo=@MobileNo,EmailId=@EmailId ,Address=@Address,Active=@Active,ModifiedDate=GETDATE() where UserId=@UserId
+    Set @Msg='User Updated Succesfully';
+    Set @Status='1';
+    End
+End    
+Select @Msg As MSg ,@Status As Status,@Focus As Focus
+End
+Go
+
+---show   User Master ---
+Alter Proc USP_ShowUserMaster
+(
+@UserID Varchar(20)=null,
+@Type Varchar(10)='show'
+)
+As
+Begin
+If (@Type='Show')
+Begin
+     if @UserID=''or @UserID=0 set @UserID = null
+     Select UserId,UserCode as[User Code],UserName as [User Name],MobileNo As [Mobile No],EmailId,Address, 
+     CASE WHEN Active = 1 THEN 'Yes' ELSE 'No' END AS Active,'UserId,HideColumn'As HideColumn ,
+     FORMAT(CreatedDate, 'dd-MM-yyyy hh:mm tt') AS [Created Date] ,
+     FORMAT(ModifiedDate, 'dd-MM-yyyy hh:mm tt') AS [Modified Date] from UserMaster
+     WHERE (@UserID IS NULL OR UserId = @UserID)
+End
+Else If(@Type='Excel')
+Begin
+     if @UserID=''or @UserID=0 set @UserID = null
+     Select UserCode as[User Code],UserName as [User Name],MobileNo As [Mobile No],
+     EmailId,Address, CASE WHEN Active = 1 THEN 'Yes' ELSE 'No' END AS Active,
+     Convert(varchar, CreatedDate,105)As [Created Date],CONVERT(varchar,ModifiedDate,105)As [Modified Date] from UserMaster
+     WHERE (@UserID IS NULL OR UserId = @UserID)
+End
+End
+
+Alter PROC dbo.USP_DeleteUserMaster
+(
+    @UserId INT
+)
+AS
+BEGIN
+    DECLARE @Msg VARCHAR(MAX);
+    DELETE FROM UserMaster WHERE UserId = @UserId;
+    Set @Msg='User Record Delete Succesfully';
+    SELECT @Msg AS Msg;
+END;
+GO
+-----Student REgistration Form Table ------
+Create Table StudentMaster
+(
+    StudentId int identity(1,1)Constraint Pk_StudentID_StudentMaster Primary Key,
+    RegistrationNo Varchar(15)Constraint UK_RegistrationNo_StudentMaster Unique,
+    StudentName Varchar(50),
+    FatherName Varchar(50),
+    DateOfBirth Date,
+    MobileNo Varchar(15),
+    EmailID Varchar(50),
+    Password Varchar(30),
+    Gender Varchar(10),
+    StudentPhoto Varchar(Max),
+    City Varchar(50),
+    Address Varchar(200),
+    CreatedDate DateTime Constraint DF_CreatedDate_StudentMaster Default Getdate(),
+    ModifiedDate DateTime
+)
+Go
+Alter Table StudentMaster
+add  FileName varchar(100)
+Alter Table StudentMAster
+add FileType varchar(20)
+Go
+--- Qulafication of Student MAster Table---
+Create Table QualificationStudentMaster
+(
+   QualificationId INT IDENTITY(1,1)Constraint Pk_QualificationStudentMaster PRIMARY KEY,
+   RegistrationNo Varchar(15)Constraint Fk_QualificationStudentMaster_StudentMaster
+   Foreign key References StudentMaster (RegistrationNo),
+   Course Varchar(100),
+   TotalMarks int,
+   ObtainedMarks int,
+   Year int,
+   CreatedDate DateTime Constraint DF_QualificationStudentMaster Default Getdate(),
+   ModifiedDate DateTime
+)
+Go
+--Sequence Creation for Registration No
+CREATE SEQUENCE Seq_RegistrationNo
+START WITH 1001
+INCREMENT BY 1
+Go
+--InsertUpdateStudentMaster--
+Alter Proc USP_InsertUpdateStudentMaster
+(
+    @RegistrationNo Varchar(50)=null,
+    @StudentName Varchar(50),
+    @FatherName Varchar(50),
+    @DateOfBirth Date,
+    @MobileNo Varchar(15),
+    @EmailID Varchar(50),
+    @Password Varchar(30),
+    @Gender Varchar(10),
+    @StudentPhoto Varchar(Max)=null,
+    @City Varchar(50),
+    @Address Varchar(200),
+    @FileName Varchar(100)=null,
+    @FileType Varchar(20)=null,
+    @CoursesXml Xml
+)
+As
+Begin
+    Declare @Msg Varchar(max);
+    Declare @Status Varchar(max)='0';   
+    If @RegistrationNo is not null AND EXISTS(SELECT 1 FROM StudentMaster WHERE RegistrationNo=@RegistrationNo)
+    Begin
+    Begin Try
+    Begin Transaction
+        Update StudentMaster
+        Set StudentName=@StudentName,FatherName=@FatherName,DateOfBirth=@DateOfBirth,MobileNo=@MobileNo,EmailID=@EmailID,Password=@Password,Gender=@Gender,
+        StudentPhoto = IIF(@StudentPhoto IS NULL OR @StudentPhoto = '', StudentPhoto, @StudentPhoto),
+        City=@City,Address=@Address,
+        FileName = IIF(@FileName IS NULL OR @FileName='', FileName, @FileName),
+        FileType = IIF(@FileType IS NULL OR @FileType='', FileType, @FileType)      
+        where RegistrationNo=@RegistrationNo
+
+        Delete From QualificationStudentMaster where RegistrationNo=@RegistrationNo
+
+        Insert Into QualificationStudentMaster(RegistrationNo,Course,TotalMarks,ObtainedMarks,Year)
+        Select @RegistrationNo,
+        Course.value('(CourseName)[1]', 'VARCHAR(50)'),
+        Course.value('(TotalMarks)[1]', 'INT'),
+        Course.value('(ObtainedMarks)[1]', 'INT'),
+        Course.value('(Year)[1]', 'INT')    
+        From @CoursesXml.nodes('/Courses/Course') AS T(Course)  
+        set @Msg='Update Succesfully';
+        Set @Status='1';
+    Commit Transaction
+    End Try
+    Begin Catch
+        Rollback Transaction
+        Set @Msg=ERROR_MESSAGE();
+        Set @Status='0';
+        End Catch
+    End
+    Else
+        Begin
+        Begin Try
+           Begin Transaction
+           Set @RegistrationNo='RG'+CAST(NEXT VALUE FOR Seq_RegistrationNo AS VARCHAR(10))
+            If Exists(Select 1 from StudentMaster where EmailID=@EmailID )
+            Begin
+                Set @Msg='Student Already Registered';
+                  Rollback Transaction;
+            End
+            Else 
+            Begin
+                Insert Into StudentMaster
+                (
+                    RegistrationNo,StudentName,FatherName,DateOfBirth,MobileNo,EmailID,
+                    Password,Gender,StudentPhoto,City,Address,FileName,FileType
+                )
+                Values
+                (
+                    @RegistrationNo,@StudentName,@FatherName,Cast(@DateOfBirth AS date),@MobileNo,@EmailID,@Password,@Gender,
+                    @StudentPhoto,@City,@Address,@FileName,@FileType     
+                )
+                Insert Into QualificationStudentMaster(RegistrationNo,Course,TotalMarks,ObtainedMarks,Year)
+                Select @RegistrationNo,
+                Course.value('(CourseName)[1]', 'VARCHAR(50)'),
+                Course.value('(TotalMarks)[1]', 'INT'),
+                Course.value('(ObtainedMarks)[1]', 'INT'),
+                Course.value('(Year)[1]', 'INT')    
+                From @CoursesXml.nodes('/Courses/Course') AS T(Course)                   
+                Set @Msg='Registration Succesfully';
+                Set @Status='1';
+                Commit Transaction
+            End          
+        End Try
+        Begin Catch
+            RollBack Transaction
+            Set @Msg=ERROR_MESSAGE();
+            Set @Status='0';
+        End Catch
+    End  
+    Select @Msg As Msg,@Status As Status
+End
+Go
+--show Student Master--
+alter Proc USP_ShowStudentMaster
+(
+@RegistrationNo Varchar(max)
+)
+AS
+Begin
+Select * from StudentMaster where RegistrationNo=@RegistrationNo
+select * from QualificationStudentMaster where RegistrationNo=@RegistrationNo
+End
+Go
+
+
+--Admission Master
+Create Table AdmissionMaster
+(
+    AdmissionId int identity(1,1)Constraint Pk_AdmissionMAster_AdmissionId Primary Key,
+    AdmissionNo Varchar(20)Constraint Uk_AdmissionMaster_AdmissionNo Unique,
+    RegistrationNo Varchar(15)Constraint Fk_AdmissionMaster_StudentMAster_RegistrationNo Foreign key References StudentMaster(RegistrationNo),
+    StudentName Varchar(50),
+    ParentsName Varchar(50),
+    ParentsProfession Varchar(100),
+    StudentDob Date,
+    MobileNo Varchar(15),
+    EmailID Varchar(50),
+    Gender Varchar(10),
+    StudentPhoto Varchar(Max),
+    City Varchar(50),
+    Address Varchar(200),
+    CreatedDate DateTime Constraint DF_AdmissionMaster_CreatedDate Default Getdate(),
+    ModifiedDate DateTime,
+    FileName varchar(100),
+    FileType varchar(20)
+)
+Go
+--Table Of Academic Qualifiation
+Create Table AcademicQualification
+(
+   QualificationId INT IDENTITY(1,1)Constraint Pk_AcademicQualification Primary Key,
+   AdmissionNo Varchar(20)Constraint Fk_AcadmeicQualification_ADmissionMAster Foreign Key references AdmissionMaster(AdmissionNo),
+   Institute Varchar(100),
+   Course Varchar(100),
+   PassingYear int,
+   TotalMarks int,
+   ObtainedMarks int,
+   Percentage Decimal(5,2),
+   CreatedDate DateTime Constraint DF_AcademicQualification Default Getdate(),
+   ModifiedDate DateTime
+)
+Go
+--Procedure For insert Update Academic Qualification
+CREATE SEQUENCE Seq_AdmissionNo
+START WITH 1001
+INCREMENT BY 1
+alter Proc USP_InsertUpdateAdmissionMaster
+(
+    @AdmissionNo Varchar(20),
+    @RegistrationNo Varchar(15),
+    @StudentName Varchar(50),
+    @ParentsName Varchar(50),
+    @ParentsProfession Varchar(100),
+    @StudentDob Date,
+    @MobileNo Varchar(15),
+    @EmailID Varchar(50),
+    @Gender Varchar(10),
+    @StudentPhoto Varchar(Max)=null,
+    @City Varchar(50),
+    @Address Varchar(200),
+    @FileName Varchar(100)=null,
+    @FileType Varchar(20)=null,
+    @CoursesXml Xml
+)
+As
+Begin
+    Declare @Msg Varchar(max);
+    Declare @Status Varchar(max)='0';   
+    If @AdmissionNo is not null and exists(select 1 from AdmissionMaster where AdmissionNo=@AdmissionNo )
+    Begin
+    Begin Try
+    Begin Transaction
+         Update AdmissionMaster
+        Set StudentName=@StudentName,ParentsName=@ParentsName,ParentsProfession=@ParentsProfession,
+        StudentDob=@StudentDob,MobileNo=@MobileNo,EmailID=@EmailID,Gender=@Gender,
+        StudentPhoto = IIF(@StudentPhoto IS NULL OR @StudentPhoto = '', StudentPhoto, @StudentPhoto),
+        City=@City,Address=@Address,
+        FileName = IIF(@FileName IS NULL OR @FileName='', FileName, @FileName),
+        FileType = IIF(@FileType IS NULL OR @FileType='', FileType, @FileType)      
+        where AdmissionNo=@AdmissionNo
+        Delete From AcademicQualification where AdmissionNo=@AdmissionNo
+
+        Insert Into AcademicQualification(AdmissionNo,Institute,Course,PassingYear,TotalMarks,ObtainedMarks,Percentage)
+       Select @AdmissionNo,
+                Course.value('(InstituteName)[1]', 'VARCHAR(100)'),
+                Course.value('(CourseName)[1]', 'VARCHAR(100)'),
+                Course.value('(Year)[1]', 'INT'),
+                Course.value('(TotalMarks)[1]', 'INT') ,
+                Course.value('(ObtainedMarks)[1]', 'INT'),
+                Course.value('(Percentage)[1]', 'Decimal(5,2)')
+                From @CoursesXml.nodes('/AcademicQualification/Course') AS T(Course)                   
+                Set @Msg='Admission Updated Successfully';
+                Set @Status='1';
+    Commit Transaction
+    End Try
+    Begin Catch
+        Rollback Transaction
+        Set @Msg=ERROR_MESSAGE();
+        Set @Status='0';
+        End Catch
+    End
+    Else
+        Begin
+        Begin Try
+          Begin Transaction
+            If Exists(Select 1 from AdmissionMaster where RegistrationNo=@RegistrationNo)
+            Begin
+                Set @Msg='Admission already registered for this student.';
+            End
+            Else If Exists(Select 1 from AdmissionMaster where EmailID=@EmailID)
+            Begin
+                Set @Msg = 'Student with this email is already registered.';
+                Set @Status = '0';
+            End
+            Else If not exists(select 1 from StudentMaster where RegistrationNo=@RegistrationNo )
+            Begin
+                set @Msg='You are not registered for admission. Please register first.';           
+            End
+            Else
+            Begin
+                Set @AdmissionNo='AD'+CAST(NEXT VALUE FOR Seq_AdmissionNo AS VARCHAR(10))
+                Insert Into AdmissionMaster
+                (
+                    AdmissionNo,RegistrationNo,StudentName,ParentsName,ParentsProfession,StudentDob,MobileNo,EmailID,
+                    Gender,StudentPhoto,City,Address,FileName,FileType
+                )
+                Values
+                (
+                    @AdmissionNo,@RegistrationNo,@StudentName,@ParentsName,@ParentsProfession,@StudentDob,@MobileNo,@EmailID,@Gender,@StudentPhoto,@City,@Address,@FileName,@FileType
+                )
+                Insert Into AcademicQualification(AdmissionNo,Institute,Course,PassingYear,TotalMarks,ObtainedMarks,Percentage)
+                Select @AdmissionNo,
+                Course.value('(InstituteName)[1]', 'VARCHAR(100)'),
+                Course.value('(CourseName)[1]', 'VARCHAR(100)'),
+                Course.value('(Year)[1]', 'INT'),
+                Course.value('(TotalMarks)[1]', 'INT') ,
+                Course.value('(ObtainedMarks)[1]', 'INT'),
+                Course.value('(Percentage)[1]', 'Decimal(5,2)')
+                From @CoursesXml.nodes('/AcademicQualification/Course') AS T(Course)                   
+                Set @Msg='Admission Registered Successfully';
+                Set @Status='1';
+           End           
+          Commit Transaction
+        End Try
+        Begin Catch
+            RollBack Transaction
+            Set @Msg=ERROR_MESSAGE();
+            Set @Status='0';
+        End Catch
+    End  
+    Select @Msg As Msg,@Status As Status
+End
+Go
+--Show AdmissionMasterandstudetnmaster--
+
+create Proc USP_ShowAdmissionMasterAndStudentMAster
+(
+@RegistrationNo Varchar(15)
+)
+AS
+Begin
+    if Exists(select 1 from AdmissionMaster where RegistrationNo=@RegistrationNo)
+    Begin
+        select * from AdmissionMaster where RegistrationNo=@RegistrationNo     
+    End
+    else 
+    Begin
+        Select * from StudentMaster where RegistrationNo=@RegistrationNo       
+    end
+End
+Go
+--ShowADmissionMAster--
+Alter Proc USP_ShowAdmissionMaster
+(
+@AdmissionNo varchar(20)
+)
+AS
+Begin
+   select * from AdmissionMaster where AdmissionNo=@AdmissionNo
+   select * from AcademicQualification where AdmissionNo=@AdmissionNo
+End
+Go
+
+ 
+--Search Student Proc----
+alter Proc SearchStudent 
+(
+    @RegistrationNo Varchar(15),
+    @StudentName Varchar(50),
+    @FatherName Varchar(50),
+    @MobileNo Varchar(15),
+    @Gender Varchar(10),
+    @RegDateFrom Date,
+    @RegDateTo Date
+    --SearchStudent '','','','','','',''
+)
+as
+Begin
+    Declare @Condition Nvarchar(max)=''
+    Declare @Query Nvarchar(max)
+    If @RegistrationNo<>''Set @Condition=@Condition+' and RegistrationNo=@RegistrationNo'
+    If @StudentName<>''Set @Condition=@Condition+' AND StudentName LIKE ''%''+@StudentName+''%'''
+    If @FatherName<>''Set @Condition=@Condition+'AND FatherName LIKE ''%''+@FatherName+''%
+    '''
+    If @MobileNo<>''Set @Condition=@Condition+ ' and MobileNo=@MobileNo'
+    If @Gender<>''Set @Condition=@Condition+' and Gender=@Gender'
+    If @RegDateFrom<>'' and @RegDateTo<>'' Set @Condition=@Condition+'  and CAST(CreatedDate as DATE) between @RegDateFrom and @RegDateTo'
+    
+    set @Query='Select RegistrationNo as [Registration No],Convert(Varchar,CreatedDate,105) AS [Registration Date],
+    StudentName as [Student Name],FatherName as [Father Name],CONVERT(VARCHAR, DateOfBirth,105) as [DateOfBirth],
+    MobileNo as [Mobile No],EmailId as [Email Id],Gender,City,Address from StudentMaster where 1=1'+@Condition
+    print (@Query)
+    Exec sp_executeSqL
+    @stmt=@Query,
+    @Params=N'@RegistrationNo Varchar(15),
+    @StudentName Varchar(50),
+    @FatherName Varchar(50),
+    @MobileNo Varchar(15),
+    @Gender Varchar(10),
+    @RegDateFrom Date,  
+    @RegDateTo Date',
+    @RegistrationNo =@RegistrationNo,
+    @StudentName =@StudentName,
+    @FatherName =@FatherName,
+    @MobileNo =@MobileNo,
+    @Gender =@Gender,
+    @RegDateFrom =@RegDateFrom,
+    @RegDateTo =@RegDateTo
+End
+Go
+/*
+Alter Proc USP_StudentReport 
+as
+Begin
+select '' As RegistrationNo,'' As StudentName,'' As FatherName,'' As DateOfBirth ,'' As MobileNo,'' As EmailId,'' As Gender,'' As StudentPhoto,'' As CreatedDAte,
+'' As City,'' As Address,'' As Course,''As TotalMarks,'' As ObtainedMarks, '' As Year
+End
+*/
+
+Alter Proc USP_StudentReport 
+(
+    @RegistrationNo varchar(15)
+)
+as
+Begin
+select SM.RegistrationNo,SM.StudentName,Sm.FatherName,Convert(Varchar,Sm.DateOfBirth,105)As DateOfBirth,Sm.MobileNo,SM.EmailID,SM.Gender,SM.StudentPhoto, Convert(Varchar,SM.CreatedDate,105) As CreatedDate,
+SM.City,SM.Address,QM.Course,Qm.TotalMarks,QM.ObtainedMarks,QM.Year from StudentMaster SM Left Join QualificationStudentMaster QM on 
+SM.RegistrationNo=Qm.RegistrationNo where sm.RegistrationNo=@RegistrationNo
+End
+Go
+
+--Proc For Search Admission/master Student--
+
+alter Proc USP_SearchStudentAdmission 
+(
+    @AdmissionNo Varchar(15),
+    @RegistrationNo Varchar(15),
+    @StudentName Varchar(50),
+    @ParentsName Varchar(50),
+    @MobileNo Varchar(15),
+    @Gender Varchar(10),
+    @AdmDateFrom Date,
+    @AdmDateTo Date
+    --USP_SearchStudentAdmission '566','ads','','','','','',''
+)
+as
+Begin
+    Declare @Condition Nvarchar(max)=''
+    Declare @Query Nvarchar(max)
+    If @AdmissionNo<>''Set @Condition=@Condition+' and AdmissionNo=@AdmissionNo'
+    If @RegistrationNo<>''Set @Condition=@Condition+' and RegistrationNo=@RegistrationNo'
+    If @StudentName<>''Set @Condition=@Condition+' AND StudentName LIKE ''%''+@StudentName+''%'''
+    If @ParentsName<>''Set @Condition=@Condition+' AND ParentsName LIKE ''%''+@ParentsName+''%'''
+    If @MobileNo<>''Set @Condition=@Condition+ ' and MobileNo=@MobileNo'
+    If @Gender<>''Set @Condition=@Condition+' and Gender=@Gender'
+    If @AdmDateFrom is not null and @AdmDateTo is not null Set @Condition=@Condition+' and CAST(CreatedDate as DATE) between @AdmDateFrom and @AdmDateTo'
+    
+    set @Query='Select AdmissionNo as [Admission No],Convert(Varchar,CreatedDate,105) AS [Admission Date],RegistrationNo As [Registration No] ,
+    StudentName as [Student Name],ParentsName as [Parents Name],CONVERT(VARCHAR, StudentDob,105) as [Student Dob],
+    MobileNo as [Mobile No],EmailId as [Email Id],Gender,City,Address from AdmissionMaster where 1=1'+@Condition
+    
+      print(@Condition)
+      print (@Query)
+  
+    Exec sp_executeSqL
+    @stmt=@Query,
+    @Params=N'@AdmissionNo Varchar(15),
+    @RegistrationNo Varchar(15),
+    @StudentName Varchar(50),
+    @ParentsName Varchar(50),
+    @MobileNo Varchar(15),
+    @Gender Varchar(10),
+    @AdmDateFrom Date,  
+    @AdmDateTo Date',
+    @AdmissionNo =@AdmissionNo,
+    @RegistrationNo=@RegistrationNo,
+    @StudentName =@StudentName,
+    @ParentsName =@ParentsName,
+    @MobileNo =@MobileNo,
+    @Gender =@Gender,
+    @AdmDateFrom =@AdmDateFrom,
+    @AdmDateTo =@AdmDateTo
+End
+/*
+alter Proc USP_AdmissionReport
+as
+Begin
+select ''As AdmissionNo  ,'' As RegistrationNo,'' As StudentName,'' As ParentsName,'' As StudentDob ,'' As MobileNo,'' As EmailId,'' As Gender,'' As StudentPhoto,'' As CreatedDAte,
+'' As City,'' As Address,'' AS Institute,'' As Course,''As TotalMarks,'' As ObtainedMarks, '' As PassingYear
+End
+*/ 
+
+
+alter Proc USP_AdmissionReport
+(
+    @AdmissionNo Varchar(15)
+)
+as
+Begin
+    Select AM.AdmissionNo,Am.RegistrationNo,Convert(varchar,Am.CreatedDate,105)As CreatedDate, AM.StudentName,AM.ParentsName,
+    Convert(varchar,AM.StudentDob,105)as StudentDob,AM.MobileNo, AM.EmailID,AM.Gender,Am.StudentPhoto, AM.City,
+    AM.Address,AQ.Institute,AQ.Course,AQ.TotalMarks,AQ.ObtainedMarks,AQ.PassingYear 
+    from AdmissionMaster AM Left Join AcademicQualification AQ  On AM.AdmissionNo=AQ.AdmissionNo 
+    Where AM.AdmissionNo=@AdmissionNo
+End
+Go
+--join for show data from pincode
+select Cm.CountryCode+' : ' +cm.CountryName as Country, SM.stateCode+' : ' +SM.StateName As State, CityMAster.City,PinCode  from CountryMaster Cm left join StateMaster SM on CM.CountryCode=SM.CountryCode 
+Left join CityMaster  on CityMaster.CountryCode=Cm.CountryCode and CityMaster.StateCode =SM.StateCode 
+LEFT JOIN PinCodeMaster PM ON PM.CountryCode = CM.CountryCode  AND PM.StateCode = SM.StateCode  AND PM.City = CityMaster.City 
+
+
+Alter proc USP_Login
+(
+    @UserCode varchar(50),
+    @Password Varchar(50)
+)
+As
+Begin
+    Declare @Status varchar(max)='0';
+    Declare @Msg Varchar(max)
+    Declare @UserName Varchar(max)
+    if Exists (select 1 from UserMaster where UserCode=@UserCode and Password=@Password)
+    Begin
+        Set @UserName=(select UserName from UserMaster where UserCode=@UserCode)
+        Set @Status='1';
+        Set @Msg='Login Succesfully';
+    End
+    Else
+    Begin
+        Set @Status='0';
+        Set @Msg='Invalid Credentilas';
+    End
+    select @Msg AS Msg ,@Status As Status,@UserName as UserName
+End
